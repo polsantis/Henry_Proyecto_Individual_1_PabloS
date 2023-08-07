@@ -27,7 +27,7 @@ def redirect_to_docs():
 
 
 # Dataset para búsquedas.
-df_search = pd.read_json('data_search.json')
+df_search = pd.read_json('search_data.json')
 
 
 # Hacemos unos cambios en unas columnas para dejarlo listo.

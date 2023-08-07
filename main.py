@@ -4,8 +4,8 @@ import numpy as np
 import pickle
 from starlette.responses import RedirectResponse
 from sklearn.metrics import mean_squared_error
-import joblib
-import msgpack
+
+
 
 # C:\Users\Pablo\H\Projects\PI_ML_OPS\venv/Scripts/Activate.ps1
 # uvicorn main:app --reload
@@ -19,82 +19,74 @@ app = FastAPI(title='PROYECTO INDIVIDUAL Nº1 - Machine Learning Operations (MLO
               description='Esta API proporciona datos y predicciones de precios para de STEAM video games')
 
 
-# Página de inicio de la API
+
+# Función para redireccionar a /docs
 @app.get('/')
 def redirect_to_docs():
     return RedirectResponse(url='/docs')
 
-# Página About de la API
-@app.get('/about/')
-async def about():
-    return {'PROYECTO INDIVIDUAL Nº1 -Machine Learning Operations (MLOps)'}
+
+# Dataset para búsquedas.
+df_search = pd.read_json('data_search.json')
 
 
-# Upload data
-df_search = pd.read_json('search_data.json')
-
-
-
-# Convertimos la columna 'release_date' al formato de fecha y la columna 'metascore' a valores numéricos
+# Hacemos unos cambios en unas columnas para dejarlo listo.
 df_search['release_date'] = pd.to_datetime(df_search["release_date"], errors='coerce')
 df_search['metascore'] = pd.to_numeric(df_search['metascore'], errors='coerce')
 
 
 
-
-# Definimos la función find_year, que será utilizada por otras funciones
+# Definimos la función find_year, que vamos a usar en todas las demás funciones
 def find_year(anio):
-    """Esta función sirve de soporte para otras funciones. Al recibir un año (int),
-       devuelve un DataFrame que contiene únicamente los datos correspondientes a ese año."""
+    """Función de soporte para las demas funciones, recibe un año (int)
+       y devuelve un dataframe solo con los valores de ese año"""
     df_anio = df_search[df_search['release_date'].dt.year == anio]
     return df_anio
 
 
-# FUNCIONES
 
-@app.get('/genre/({year})')
-def genre(year:str):
-    """Al recibir un año (int) devuelve una lista con los 5 géneros
-       más vendidos en el orden requerido."""
-
-    try:
-        anio = int(year)
-    except (ValueError, KeyError, TypeError):
-        return "El dato ingresado no es correcto"
-
-    df_genre = find_year(anio)
-    df_genre = df_genre.explode("genres")
-    lista_genre = df_genre['genres'].value_counts().head().index.to_list()
-    return {'Año' : anio, 'Generos' : lista_genre}
-
-
-
-@app.get('/games/({year})')
-def games(year):
-    """Al recibir un año (int) devuelve una lista con los 5 géneros
-       más vendidos en el orden requerido."""
+@app.get('/genero/({year})')
+def genero(year:str):
+    """Recibe un año y devuelve una lista con los 5 géneros
+       más vendidos en el orden correspondiente. Ejemplo: 2017"""
 
     try:
         anio = int(year)
     except (ValueError, KeyError, TypeError):
-        return "El dato ingresado no es correcto"
+        return "El dato ingresado es incorrecto"
 
-    df_games = find_year(anio)
-    lista_games = df_games.title.to_list()
+    df_genero = find_year(anio)
+    df_genero = df_genero.explode("genres")
+    lista_generos = df_genero['genres'].value_counts().head().index.to_list()
+    return {'Año' : anio, 'Generos' : lista_generos}
+
+
+
+@app.get('/juegos/({year})')
+def juegos(year):
+    """Recibe un año y devuelve una lista con los juegos lanzados en el año. Ejemplo: 2017"""
+
+    try:
+        anio = int(year)
+    except (ValueError, KeyError, TypeError):
+        return "El dato ingresado es incorrecto"
+
+    df_juegos = find_year(anio)
+    lista_juegos = df_juegos.title.to_list()
     
-    return {'Año' : anio, 'Juegos' : lista_games}
+    return {'Año' : anio, 'Juegos' : lista_juegos}
 
 
 
 @app.get('/specs/({year})')
 def specs(year):
-    """Al recibir un año (int) devuelve una lista con las 5 specs
-       más repetidas en el orden correspondiente."""
+    """Recibe un año y devuelve una lista con los 5 specs que 
+       más se repiten en el mismo año en el orden correspondiente. Ejemplo: 2017"""
 
     try:
         anio = int(year)
     except (ValueError, KeyError, TypeError):
-        return "El dato ingresado no es correcto"
+        return "El dato ingresado es incorrecto"
 
     df_specs = find_year(anio)
     df_specs = df_specs.explode("specs")
@@ -105,12 +97,12 @@ def specs(year):
 
 @app.get('/earlyacces/({year})')
 def earlyacces(year):
-    """Al recibir un año (int) devuelve la cantidad de juegos lanzados en ese año con early access."""
+    """Recibe un año y devuelve la cantidad de juegos lanzados en ese año con early access. Ejemplo: 2017"""
 
     try:
         anio = int(year)
     except (ValueError, KeyError, TypeError):
-        return "El dato ingresado no es correcto"
+        return "El dato ingresado es incorrecto"
 
     df_early = find_year(anio)
     early = str(df_early['early_access'].sum())
@@ -121,13 +113,13 @@ def earlyacces(year):
 
 @app.get('/sentiment/({year})')
 def sentiment(year):
-    """Al recibir un año (int) devuelve una lista con la cantidad de registros que
-       se encuentren categorizados con un análisis de sentimiento ese año."""
+    """Recibe un año y se devuelve una lista con la cantidad de registros que
+       se encuentren categorizados con un análisis de sentimiento ese año. Ejemplo: 2017"""
 
     try:
         anio = int(year)
     except (ValueError, KeyError, TypeError):
-        return "El dato ingresado no es correcto"
+        return "El dato ingresado es incorrecto"
 
     df_sentiment = find_year(anio)
     sent_on = (df_sentiment["sentiment"] == 'Overwhelmingly Negative').sum()
@@ -165,12 +157,12 @@ def sentiment(year):
 
 @app.get('/metascore/({year})')
 def metascore(year):
-    """Al recibir un año (int) devuelve  el top 5 juegos con mayor metascore."""
+    """Recibe un año y retorna el top 5 juegos con mayor metascore. Ejemplo: 2017"""
 
     try:
         anio = int(year)
     except (ValueError, KeyError, TypeError):
-        return "El dato ingresado no es correcto"
+        return "El dato ingresado es incorrecto"
 
     df_meta = find_year(anio)
     df_meta = df_meta[['title', 'metascore']].sort_values('metascore', axis=0, ascending=False).head()
@@ -184,3 +176,66 @@ def metascore(year):
         lista_name_score.append(name_score)
 
     return {'Año' : anio, 'Títulos' : lista_name_score}
+
+
+
+@app.get("/predecir_precio")
+async def predecir_precio(
+    early_access: bool,
+    year:        int =   Query(2018, description='Año'),
+    genres:      list =  Query(['action','adventure'], description='Genres'),
+    specs:       list =  Query(['single-player', 'multi-player'], description='Specs'),
+    precio_real: float = Query(0.0, description='Precio real')):
+
+
+    """Esta función recibe todas las variables necesarias, y devuelve la predicción del precio.
+       Si se ingresa el precio real devuelve el RMSE según la predicción, si no devuelve el mejor
+       RMSE general obtenido por el modelo usando Cross Validation"""
+    
+    # Cargamos el modelo
+    with open('modelo_elastic.pkl', 'rb') as modelo:
+        modelo_elastic = pd.read_pickle(modelo)
+
+    # Cargamos tabla vacía para predicción
+    with open('x_prediccion.pkl', 'rb') as x_prediccion:
+        x_pred = pd.read_pickle(x_prediccion)
+
+
+    # Early_access es True o False
+    x_pred['early_access'] = early_access
+
+
+    x_pred['year'] = year
+
+
+    # Hacemos lista de specs, tags y genres:
+    lista_features = x_pred.columns.tolist()
+    lista_features = lista_features[2:]
+
+    # Completamos con 1 las columnas correspondientes
+    for genre in genres:
+        if genre.lower() in lista_features:
+            x_pred[genre.lower()] = 1
+    for spec in specs:
+        if spec.lower() in lista_features:
+            x_pred[spec.lower()] = 1
+
+
+    # Hacemos la predicción
+    prediccion = modelo_elastic.predict(x_pred)
+
+    # Hacemos este paso solo porque el método mean_squared_error necesita 
+    # un valor con forma de array, aunque no sea lo más prolijo.
+
+    if precio_real == 0:
+        rmse = f"RMSE del modelo: 8.144" # MODIFICARRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+        pred_str = f"Precio predicho: ${round(prediccion[0], 2)}"
+        return {'prediccion': pred_str,
+                'RMSE' : rmse}
+    else:
+        rmse = f"RMSE: {np.sqrt(mean_squared_error(pd.Series({'precio':precio_real}), prediccion))}"
+        pred_str = f"Precio predicho: ${round(prediccion[0], 2)}"
+        precio_real_str = f"Precio real: ${precio_real}"
+        return {'prediccion': pred_str,
+                'precio_real': precio_real_str,
+                'RMSE' : rmse}

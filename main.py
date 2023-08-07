@@ -1,6 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 import pandas as pd
 import numpy as np
+import pickle
+from starlette.responses import RedirectResponse
+from sklearn.metrics import mean_squared_error
+import joblib
+import msgpack
 
 # C:\Users\Pablo\H\Projects\PI_ML_OPS\venv/Scripts/Activate.ps1
 # uvicorn main:app --reload
@@ -16,8 +21,8 @@ app = FastAPI(title='PROYECTO INDIVIDUAL Nº1 - Machine Learning Operations (MLO
 
 # Página de inicio de la API
 @app.get('/')
-async def index():
-    return {'¡Bienvenido a tu API de recomendación! Para comenzar, dirígete a /docs'}
+def redirect_to_docs():
+    return RedirectResponse(url='/docs')
 
 # Página About de la API
 @app.get('/about/')

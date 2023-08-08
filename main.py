@@ -14,41 +14,41 @@ from sklearn.metrics import mean_squared_error
 # STOP:
 # ctrl + c
 
-# Configuración de la API
+# Configuración inicial de la API
 app = FastAPI(title='PROYECTO INDIVIDUAL Nº1 - Machine Learning Operations (MLOps) - Pablo Alfonso Santisteban DataFT13',
               description='Esta API proporciona datos y predicciones de precios para de STEAM video games')
 
 
 
-# Función para redireccionar a /docs
+# Redireccionamiento a /docs
 @app.get('/')
 def redirect_to_docs():
     return RedirectResponse(url='/docs')
 
 
-# Dataset para búsquedas.
+# Conjunto de datos para búsquedas.
 df_search = pd.read_json('search_data.json')
 
 
-# Hacemos unos cambios en unas columnas para dejarlo listo.
+# Realizamos ajustes en algunas columnas para su procesamiento.
 df_search['release_date'] = pd.to_datetime(df_search["release_date"], errors='coerce')
 df_search['metascore'] = pd.to_numeric(df_search['metascore'], errors='coerce')
 
 
 
-# Definimos la función find_year, que vamos a usar en todas las demás funciones
+# Definición de la función find_year, que será empleada en todas las demás funciones.
 def find_year(anio):
-    """Función de soporte para las demas funciones, recibe un año (int)
-       y devuelve un dataframe solo con los valores de ese año"""
+    """Esta función sirve de soporte para otras funciones. Al recibir un año (int),
+       devuelve un DataFrame que contiene únicamente los datos correspondientes a ese año."""
     df_anio = df_search[df_search['release_date'].dt.year == anio]
     return df_anio
 
 
+# FUNCIONES:
 
 @app.get('/genero/({year})')
 def genero(year:str):
-    """Recibe un año y devuelve una lista con los 5 géneros
-       más vendidos en el orden correspondiente. Ejemplo: 2017"""
+    """Al recibir un año (int) devuelve una lista con los 5 géneros más vendidos en el orden requerido."""
 
     try:
         anio = int(year)
@@ -64,7 +64,7 @@ def genero(year:str):
 
 @app.get('/juegos/({year})')
 def juegos(year):
-    """Recibe un año y devuelve una lista con los juegos lanzados en el año. Ejemplo: 2017"""
+    """Al recibir un año (int) devuelve una lista con los juegos lanzados en el año."""
 
     try:
         anio = int(year)
@@ -80,8 +80,7 @@ def juegos(year):
 
 @app.get('/specs/({year})')
 def specs(year):
-    """Recibe un año y devuelve una lista con los 5 specs que 
-       más se repiten en el mismo año en el orden correspondiente. Ejemplo: 2017"""
+    """Al recibir un año (int) devuelve una lista con las 5 specs más repetidas en el orden correspondiente."""
 
     try:
         anio = int(year)
@@ -97,7 +96,7 @@ def specs(year):
 
 @app.get('/earlyacces/({year})')
 def earlyacces(year):
-    """Recibe un año y devuelve la cantidad de juegos lanzados en ese año con early access. Ejemplo: 2017"""
+    """Al recibir un año (int) devuelve la cantidad de juegos lanzados en ese año con early access."""
 
     try:
         anio = int(year)
@@ -113,8 +112,8 @@ def earlyacces(year):
 
 @app.get('/sentiment/({year})')
 def sentiment(year):
-    """Recibe un año y se devuelve una lista con la cantidad de registros que
-       se encuentren categorizados con un análisis de sentimiento ese año. Ejemplo: 2017"""
+    """Al recibir un año (int) devuelve una lista con la cantidad de registros que
+       se encuentren categorizados con un análisis de sentimiento ese año."""
 
     try:
         anio = int(year)
@@ -157,7 +156,7 @@ def sentiment(year):
 
 @app.get('/metascore/({year})')
 def metascore(year):
-    """Recibe un año y retorna el top 5 juegos con mayor metascore. Ejemplo: 2017"""
+    """Al recibir un año (int) devuelve  el top 5 juegos con mayor metascore."""
 
     try:
         anio = int(year)
@@ -188,27 +187,29 @@ async def predecir_precio(
     precio_real: float = Query(0.0, description='Precio real')):
 
 
-    """Esta función recibe todas las variables necesarias, y devuelve la predicción del precio.
-       Si se ingresa el precio real devuelve el RMSE según la predicción, si no devuelve el mejor
-       RMSE general obtenido por el modelo usando Cross Validation"""
+    """Esta función acepta todas las variables necesarias como entrada 
+    y devuelve la predicción del precio. Si se proporciona el precio real, 
+    calculará el RMSE (Root Mean Square Error) en relación con la predicción. 
+    En caso contrario, devuelve el RMSE general más óptimo obtenido por el modelo 
+    mediante la técnica de Cross Validation."""
     
-    # Cargamos el modelo
+    # Modelo
     with open('modelo_elastic.pkl', 'rb') as modelo:
         modelo_elastic = pd.read_pickle(modelo)
 
-    # Cargamos tabla vacía para predicción
+    # Tabla vacía para predicción
     with open('x_prediccion.pkl', 'rb') as x_prediccion:
         x_pred = pd.read_pickle(x_prediccion)
 
 
-    # Early_access es True o False
+    # Early_access True o False
     x_pred['early_access'] = early_access
 
 
     x_pred['year'] = year
 
 
-    # Hacemos lista de specs, tags y genres:
+    # Lista de specs, tags y genres:
     lista_features = x_pred.columns.tolist()
     lista_features = lista_features[2:]
 
@@ -221,14 +222,15 @@ async def predecir_precio(
             x_pred[spec.lower()] = 1
 
 
-    # Hacemos la predicción
+    # Predicción
     prediccion = modelo_elastic.predict(x_pred)
 
-    # Hacemos este paso solo porque el método mean_squared_error necesita 
-    # un valor con forma de array, aunque no sea lo más prolijo.
+    # Realización de este paso adicional debido a que el método 
+    # mean_squared_error demanda un valor con formato de array, 
+    # al margen de la prolijidad.
 
     if precio_real == 0:
-        rmse = f"RMSE del modelo: 8.144" # MODIFICARRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+        rmse = f"RMSE del modelo: 9.901"
         pred_str = f"Precio predicho: ${round(prediccion[0], 2)}"
         return {'prediccion': pred_str,
                 'RMSE' : rmse}
